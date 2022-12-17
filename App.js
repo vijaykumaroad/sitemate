@@ -3,6 +3,7 @@ import {SafeAreaView, StyleSheet, FlatList, Text} from 'react-native';
 import Header from './src/components/Header';
 import RenderItem from './src/components/RenderItem';
 import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const APIKEY = '10f736e3f3d64035857f016a67aa6e1c';
 
@@ -15,17 +16,34 @@ const App = () => {
 
     if (!rText || rText?.length === 0) rText = 'everything';
 
-    const results = await axios.get(
-      `https://newsapi.org/v2/everything?q=${rText}&apiKey=${APIKEY}`,
-    );
+    const results = await axios
+      .get(`https://newsapi.org/v2/everything?q=${rText}&apiKey=${APIKEY}`)
+      .catch(e => e);
 
     if (results?.data?.status?.toLowerCase() === 'ok') {
       setData(results?.data?.articles);
     } else {
+      // error - something went wrong
       setData([]);
     }
 
+    await storeHistory(rText);
     setLoading(false);
+  };
+
+  const storeHistory = async text => {
+    try {
+      const value = await AsyncStorage.getItem('@search_history');
+      let prevHistory = value != null ? JSON.parse(value) : [];
+      prevHistory.push({
+        text: text,
+        dt: new Date().toString(),
+      });
+
+      AsyncStorage.setItem('@search_history', JSON.stringify(prevHistory));
+    } catch (e) {
+      // error reading value
+    }
   };
 
   const renderHeader = () => {
